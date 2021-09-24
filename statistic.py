@@ -1,39 +1,21 @@
-import streamlit as st
+import altair as alt
+import matplotlib.pyplot as plt
+import seaborn as sns
 import numpy as np
 import pandas as pd
 import plotly.express as px
-import matplotlib.pyplot as plt
+import plotly.graph_objects as go
+import streamlit as st
 from PIL import Image
-import altair as alt
+from sklearn.linear_model import LinearRegression
 
 #####クラスの定義#####
-class constraints:
-
-  def __init__(self):
-    self.cons_1,self.cons_2,self.cons_3,self.cons_4=st.beta_columns(4)
-
-  #アクティベーションボタン
-  def activate(self):
-    #アクティベートボタン
-    self.cons_1.checkbox('activate', value=False)
-
-  #変数選択
-  def variable(self,data):
-    self.cons_2.selectbox('Set a variable',(data))
-
-  #不等号の条件式
-  def formula(self):
-    self.cons_3.selectbox('Set a constraint',('','>','≧','＝','<','≦','≠'))
-
-  #数字の選択
-  def value(self):
-    self.cons_4.number_input('Set a value',)
 
 ######関数の定義######
 def choose_two_vari(data):
   vari_left, vari_right=st.beta_columns(2)
-  vari1=vari_left.selectbox('第一変数',(data.columns.values))
-  vari2=vari_right.selectbox('第二変数',(data.columns.values))
+  vari1=vari_left.selectbox('Xの値',(data.columns.values))
+  vari2=vari_right.selectbox('Yの値',(data.columns.values))
 
   return vari1, vari2
 
@@ -44,24 +26,23 @@ def choose_some_vari(data):
 
   return vari_some
 
-
 ####################
 
 #####画面表示#########
 
 #タイトルを表示
-st.title('Data Science Life')
+st.title('Data Science')
 
 #サイドバーを加える
 # ファイルアップロード
 
-uploaded_file = st.sidebar.file_uploader("Upload a file to start your science life!!", type=['xlsx','csv'])
+uploaded_file = st.sidebar.file_uploader("ファイルをアップロード", type=['csv'])
 
 if uploaded_file is not  None:
 
   add_selectbox = st.sidebar.selectbox(
     'Information',
-    ('アップロードデータ','基本統計量','折れ線グラフ・棒グラフ','散布図','回帰分析','Clustering', 'Machine Learning')
+    ('アップロードデータ','基本統計量','ヒストグラム','折れ線グラフ・棒グラフ','2変数の関係','群間比較','回帰分析','クラスタリング','機械学習')
   )
   df = pd.read_csv(uploaded_file)
 
@@ -102,6 +83,38 @@ if uploaded_file is not  None:
     desc_vari=choose_some_vari(df)
     st.table(data_summary.loc[desc_vari])
 
+    #相関行列
+    st.subheader('●相関行列')
+
+    #相関行列
+    vari_corr=df[desc_vari].corr()
+    st.table(vari_corr)
+
+    #相関行列のヒートマップ
+    st.subheader('●相関のヒートマップ ')
+    fig_corr, ax_corr = plt.subplots(figsize=(12, 9))
+    sns.heatmap(vari_corr, square=True, vmax=1, vmin=-1, center=0)
+    st.write(fig_corr)
+
+    #散布図の制約条件
+    #st.write('Constraints')
+    #add_constraint=st.button('Add constraints')
+
+
+  #ヒストグラムのページ
+  if add_selectbox=='ヒストグラム':
+    st.header('ヒストグラム')
+    #表示変数の選択
+    hist_vari=st.selectbox('表示変数',(df.columns.values))
+
+    fig_hist = px.histogram(df[hist_vari], x=hist_vari, histnorm='probability')
+    skew_info=df[hist_vari].skew()
+    kurt_info=df[hist_vari].kurt()
+    data_skew_kurt=pd.DataFrame({'尖度':[skew_info],'歪度':[kurt_info]})
+
+    st.write(fig_hist)
+    st.table(data_skew_kurt)
+
   #####折れ線グラフ・棒グラフ#####
   if add_selectbox=='折れ線グラフ・棒グラフ':
     #表示変数の選択
@@ -117,7 +130,7 @@ if uploaded_file is not  None:
 
     if x_fix:
 
-      #差を取得したい
+      #差を取得
       graph_vari=fix_right.selectbox('X軸の値',(set(df.columns.values) - set(disp_vari)))
       df_fix = df.set_index(graph_vari, drop=False)
 
@@ -126,89 +139,67 @@ if uploaded_file is not  None:
     else:
       st.line_chart(df[disp_vari])
 
+
     #表示変数の選択
-    st.write('●棒グラフ(度数)')
-    bar_vari=st.selectbox('比較する値',(df.columns.values))
+    st.write('●棒グラフ')
+    bar2_vari=st.selectbox('縦軸の指定',(df.columns.values))
 
-    #属性ごとに見る
-    attribute_fix=st.checkbox('属性ごとに比較')
+    #横軸の指定
+    attributes=st.selectbox('横軸の指定',(df.columns.values))
+    fig_bar2= go.Figure(data=[go.Bar(name='棒グラフ', x=df[attributes], y=df[bar2_vari])])
+    fig_bar2.update_layout(xaxis_title=attributes,yaxis_title=bar2_vari,autosize=False,width=1024,height=768)
 
-    if attribute_fix:
-      attributes=st.selectbox('属性ごとに作成',(df.columns.values))
-      fig = alt.Chart(df).mark_bar(size=5).encode(
-          x=bar_vari,
-          y='count()',
-          column=alt.Column(attributes)
-      ).properties(
-          width=150,
-          height=150
-      ).interactive()
+    st.write(fig_bar2)
 
-    else:
-      fig = alt.Chart(df).mark_bar(size=60).encode(
-          x=bar_vari,
-          y='count()',
-      ).properties(
-          width=300,
-          height=300
-      ).interactive()
+  #####2変数の比較#####
+  if add_selectbox=='2変数の関係':
+    #相関図の作成
+    st.subheader('●２変数の相関図')
+    #相関図に表示する変数の選択
+    dotmap_vari=choose_two_vari(df)
+    #散布図の作成
+    fig_dot = px.scatter(x=df[dotmap_vari[0]], y=df[dotmap_vari[1]])
+    st.plotly_chart(fig_dot, use_container_width=True)
 
-    st.write(fig)
 
-    #棒グラフの表示
-    #st.write('●棒グラフ')
-    #st.pyplot(df[desc_vari])
-    #st.write(
-    #px.bar(df[desc_vari], x='medal', y='count' ,title="sample figure"))
-
-  #散布図の表示
-  if add_selectbox=='散布図':
-    st.header('散布図')
+  #####散布図の表示
+  if add_selectbox=='群間比較':
+    st.header('群間比較')
     #散布図の表示
 
-    #散布図に表示する変数の選択
-
-    dotmap_vari=choose_two_vari(df)
-    #散布図の制約条件
-    st.write('Constraints')
-    add_constraint=st.button('Add constraints')
-
-#制約条件の追加
-    #if add_constraint:
-      #constaintslist=constraints()
-      #それぞれの変数をリストでまとめて格納
-      #activation=constaintslist.activate()
-      #variable=constaintslist.variable(df.columns.values)
-      #form=constaintslist.formula()
-      #value=constaintslist.value()
-      #constaintslist_each=[activation,variable,form,value]
-      #constaintslist_all.append(constaintslist_each)
-
-
-
-
-    #散布図の作成
-    fig = px.scatter(x=df[dotmap_vari[0]], y=df[dotmap_vari[1]])
-    st.plotly_chart(fig, use_container_width=True)
+    #ペアプロット
+    st.subheader('●ペアプロット')
+    pair_compare=st.selectbox('2つの比較対照群を選択',(df.columns.values))
+    fig_pairplot=sns.pairplot(df, hue=pair_compare)
+    st.pyplot(fig_pairplot)
 
   #回帰分析のページ
   if add_selectbox=='回帰分析':
     st.header('回帰分析')
     #レイアウトを２分割
     left_column, right_column=st.beta_columns(2)
-    left_column.write('変数選択')
-    left_column.write('2次式以上の変数')
-    right_column.write('モデル式')
+    Depe_value=left_column.selectbox('被説明変数',(df.columns.values))
+    Inde_values=right_column.multiselect('説明変数',(df.columns.values))
 
+    #回帰分析
+    clf = LinearRegression()
+    # 予測モデルを作成
+    clf.fit(df[Inde_values], df[Depe_value])
+    linear_graph=plt.scatter(df[Inde_values], df[Depe_value])
+    linear_graph.plot(df[Inde_values], clf.predict(Depe_value))
+    st.write(linear_graph)
 
   #クラスタリング のページ
-  if add_selectbox=='Clustering':
-    st.header('クラスタリング ')
+  if add_selectbox=='クラスタリング':
+    st.header('クラスタリング')
+    st.write('準備中')
 
   #機械学習のページ
-  if add_selectbox=='Machine Learning':
-    st.header('Mavhine Learning')
+  if add_selectbox=='機械学習':
+    st.header('機械学習')
+
 else:
+
   #st.write('Upload a file to start your science life!!')
   image = Image.open('eniguma.jpeg')
   st.image(image, caption='',use_column_width=True)
