@@ -176,18 +176,19 @@ if uploaded_file is not  None:
   #回帰分析のページ
   if add_selectbox=='回帰分析':
     st.header('回帰分析')
+    st.write('準備中')
     #レイアウトを２分割
-    left_column, right_column=st.beta_columns(2)
-    Depe_value=left_column.selectbox('被説明変数',(df.columns.values))
-    Inde_values=right_column.multiselect('説明変数',(df.columns.values))
+    #left_column, right_column=st.beta_columns(2)
+    #Depe_value=left_column.selectbox('被説明変数',(df.columns.values))
+    #Inde_values=right_column.multiselect('説明変数',(df.columns.values))
 
     #回帰分析
-    clf = LinearRegression()
+    #clf = LinearRegression()
     # 予測モデルを作成
-    clf.fit(df[Inde_values], df[Depe_value])
-    linear_graph=plt.scatter(df[Inde_values], df[Depe_value])
-    linear_graph.plot(df[Inde_values], clf.predict(Depe_value))
-    st.write(linear_graph)
+    #clf.fit(df[Inde_values], df[Depe_value])
+    #linear_graph=plt.scatter(df[Inde_values], df[Depe_value])
+    #linear_graph.plot(df[Inde_values], clf.predict(Depe_value))
+    #st.write(linear_graph)
 
   #クラスタリング のページ
   if add_selectbox=='クラスタリング':
@@ -197,6 +198,7 @@ if uploaded_file is not  None:
   #機械学習のページ
   if add_selectbox=='機械学習':
     st.header('機械学習')
+    st.write('準備中')
 
 else:
 
