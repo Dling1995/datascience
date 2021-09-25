@@ -8,6 +8,8 @@ import plotly.graph_objects as go
 import streamlit as st
 from PIL import Image
 from sklearn.linear_model import LinearRegression
+import statsmodels.api as sm
+from sklearn.model_selection import train_test_split
 
 #####クラスの定義#####
 
@@ -42,7 +44,7 @@ if uploaded_file is not  None:
 
   add_selectbox = st.sidebar.selectbox(
     'Information',
-    ('アップロードデータ','基本統計量','ヒストグラム','折れ線グラフ・棒グラフ','2変数の関係','群間比較','回帰分析','クラスタリング','機械学習')
+    ('アップロードデータ','基本統計量','ヒストグラム','折れ線グラフ・棒グラフ','2変数の関係','群間比較','線形回帰分析','クラスタリング','機械学習')
   )
   df = pd.read_csv(uploaded_file)
 
@@ -111,6 +113,7 @@ if uploaded_file is not  None:
     skew_info=df[hist_vari].skew()
     kurt_info=df[hist_vari].kurt()
     data_skew_kurt=pd.DataFrame({'尖度':[skew_info],'歪度':[kurt_info]})
+    data_skew_kurt.index = [hist_vari]
 
     st.write(fig_hist)
     st.table(data_skew_kurt)
@@ -174,13 +177,55 @@ if uploaded_file is not  None:
     st.pyplot(fig_pairplot)
 
   #回帰分析のページ
-  if add_selectbox=='回帰分析':
-    st.header('回帰分析')
-    st.write('準備中')
+  if add_selectbox=='線形回帰分析':
+    st.header('線形回帰分析')
+
     #レイアウトを２分割
-    #left_column, right_column=st.beta_columns(2)
-    #Depe_value=left_column.selectbox('被説明変数',(df.columns.values))
-    #Inde_values=right_column.multiselect('説明変数',(df.columns.values))
+    left_column, right_column=st.columns(2)
+    Depe_value=left_column.selectbox('目的変数',(df.columns.values))
+    Inde_values=right_column.multiselect('説明変数',(df.columns.values))
+
+    if Inde_values:
+      #モデル式を表示
+      Inde_equ_make=[]
+      for i in range(len(Inde_values)):
+        Inde_equ_make.append('β_'+str(i+1)+'X_'+str(i+1)+'['+str(Inde_values[i])+']')
+      Inde_equ= '+'.join(Inde_equ_make)
+      st.write('●モデル式')
+      st.latex(f'Y[{Depe_value}]=β_0[Constant]+{Inde_equ}')
+
+      #目的変数(Y)
+      Y = np.array(df[Depe_value])
+      # 説明変数(X)
+      X = np.array(df[Inde_values])
+      # モデル構築　
+      X = sm.add_constant(X)
+      est = sm.OLS(Y, X)
+      est2 = est.fit()
+
+      # 結果表示
+      st.write('●結果表示')
+      st.write(est2.summary())
+      coefficeint_matrix=pd.DataFrame(columns=['係数'],index=Inde_values)
+
+      for i in range(len(Inde_values)):
+        coefficeint_matrix.loc[Inde_values[i]] = est2.params[i+1]
+      st.table(coefficeint_matrix)
+
+      # 結果表示
+      st.write('●可視化')
+      regress_axis_fix=st.selectbox('可視化する説明変数の選択',(Inde_values))
+      fig_reg = plt.figure(figsize=(12,5))
+      plt.scatter(df[regress_axis_fix], df[Depe_value], color='blue')
+      plt.plot(df[regress_axis_fix], est2.params[0]+coefficeint_matrix.loc[regress_axis_fix,'係数']*df[regress_axis_fix], color='red')
+      st.write(fig_reg)
+
+
+    else:
+      #説明変数を指定
+      st.write('説明変数を指定してください。')
+
+
 
     #回帰分析
     #clf = LinearRegression()
