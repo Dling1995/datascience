@@ -180,10 +180,9 @@ if uploaded_file is not  None:
   if add_selectbox=='線形回帰分析':
     st.header('線形回帰分析')
 
-    #レイアウトを２分割
-    left_column, right_column=st.columns(2)
-    Depe_value=left_column.selectbox('目的変数',(df.columns.values))
-    Inde_values=right_column.multiselect('説明変数',(df.columns.values))
+    #変数の選択
+    Depe_value=st.selectbox('目的変数',(df.columns.values))
+    Inde_values=st.multiselect('説明変数',(df.columns.values))
 
     if Inde_values:
       #モデル式を表示
